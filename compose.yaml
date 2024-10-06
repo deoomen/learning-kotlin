@@ -1,0 +1,6 @@
+services:
+  learning-kotlin:
+    build: .
+    volumes:
+      - ./app:/app
+    tty: true

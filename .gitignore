@@ -1,0 +1,5 @@
+# VSCode files
+.history
+
+# Kotlin files
+*.jar
