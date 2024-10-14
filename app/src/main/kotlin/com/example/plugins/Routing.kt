@@ -9,6 +9,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.http.ContentType
 import com.example.model.*
+import io.ktor.serialization.*
 
 fun Application.configureRouting() {
     // install(StatusPages) {
@@ -17,19 +18,7 @@ fun Application.configureRouting() {
     //     }
     // }
     routing {
-        get("/") {
-            call.respondText("Hello World!")
-        }
-
-        // Static plugin. Try to access `/static/index.html`
         staticResources("/static", "static")
-
-        get("/error-test") {
-            throw IllegalStateException("Too Busy")
-        }
-
-        // ---
-        staticResources("/pantry/product-ui", "product-ui")
 
         route("/pantry") {
             get {
@@ -48,10 +37,22 @@ fun Application.configureRouting() {
             route("/products") {
                 get {
                     val products = ProductRepository.allProducts()
-                    call.respondText(
-                        contentType = ContentType.parse("text/html"),
-                        text = products.productsAsTable()
-                    )
+                    call.respond(products)
+                }
+
+                get("/byName/{name}") {
+                    val name = call.parameters["name"]
+                    if (name == null) {
+                        call.respond(HttpStatusCode.BadRequest)
+                        return@get
+                    }
+
+                    val product = ProductRepository.productByName(name)
+                    if (product == null) {
+                        call.respond(HttpStatusCode.NotFound)
+                        return@get
+                    }
+                    call.respond(product)
                 }
 
                 get("/byType/{type}") {
@@ -71,44 +72,36 @@ fun Application.configureRouting() {
                             return@get
                         }
 
-                        call.respondText(
-                            contentType = ContentType.parse("text/html"),
-                            text = products.productsAsTable(),
-                        )
+                        call.respond(products)
                     } catch (ex: IllegalArgumentException) {
                         call.respond(HttpStatusCode.BadRequest)
                     }
                 }
 
                 post {
-                    val formContent = call.receiveParameters()
-
-                    val params = Triple(
-                        formContent["name"] ?: "",
-                        formContent["quantity"] ?: "",
-                        formContent["type"] ?: "",
-                    )
-
-                    if (params.toList().any { it.isEmpty() }) {
-                        call.respond(HttpStatusCode.BadRequest)
-                        return@post
-                    }
-
                     try {
-                        val type = Type.valueOf(params.third)
-                        ProductRepository.addProduct(
-                            Product(
-                                params.first,
-                                params.second.toInt(),
-                                type,
-                            )
-                        )
-
+                        val product = call.receive<Product>()
+                        ProductRepository.addProduct(product)
                         call.respond(HttpStatusCode.NoContent)
-                    } catch (ex: IllegalArgumentException) {
-                        call.respond(HttpStatusCode.BadRequest)
                     } catch (ex: IllegalStateException) {
                         call.respond(HttpStatusCode.BadRequest)
+                    } catch (ex: JsonConvertException) {
+                        call.respond(HttpStatusCode.BadRequest)
+                    }
+                }
+
+                delete("/{name}") {
+                    val name = call.parameters["name"]
+
+                    if (name == null) {
+                        call.respond(HttpStatusCode.BadRequest)
+                        return@delete
+                    }
+
+                    if (ProductRepository.removeProduct(name)) {
+                        call.respond(HttpStatusCode.NoContent)
+                    } else {
+                        call.respond(HttpStatusCode.NotFound)
                     }
                 }
             }

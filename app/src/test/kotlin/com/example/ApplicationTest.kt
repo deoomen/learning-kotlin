@@ -1,13 +1,14 @@
 package com.example
 
+import com.example.model.Type
+import com.example.model.Product
+import io.ktor.client.call.*
+import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.testing.*
-import org.junit.Test
-import kotlin.test.assertContains
-import kotlin.test.assertEquals
-
+import kotlin.test.*
 
 class ApplicationTest {
     @Test
@@ -15,62 +16,63 @@ class ApplicationTest {
         application {
             module()
         }
+        val client = createClient {
+            install(ContentNegotiation) {
+                json()
+            }
+        }
 
         val response = client.get("/pantry/products/byType/Vegetable")
-        val body = response.bodyAsText()
+        val results = response.body<List<Product>>()
 
         assertEquals(HttpStatusCode.OK, response.status)
-        assertContains(body, "broccoli")
-        assertContains(body, "carrot")
+
+        val expectedProductNames = listOf("broccoli", "carrot")
+        val actualProductNames = results.map(Product::name)
+        assertContentEquals(expectedProductNames, actualProductNames)
     }
 
     @Test
     fun invalidTypeProduces400() = testApplication {
-        application {
-            module()
-        }
-
         val response = client.get("/pantry/products/byType/Invalid")
         assertEquals(HttpStatusCode.BadRequest, response.status)
     }
 
+
     @Test
     fun unusedTypeProduces404() = testApplication {
-        application {
-            module()
-        }
-
         val response = client.get("/pantry/products/byType/Dairy")
         assertEquals(HttpStatusCode.NotFound, response.status)
     }
 
     @Test
-    fun newProductCanBeAdded() = testApplication {
+    fun newProductsCanBeAdded() = testApplication {
         application {
             module()
         }
+        val client = createClient {
+            install(ContentNegotiation) {
+                json()
+            }
+        }
 
+        val product = Product("salt", 3, Type.Other)
         val response1 = client.post("/pantry/products") {
             header(
                 HttpHeaders.ContentType,
-                ContentType.Application.FormUrlEncoded.toString()
+                ContentType.Application.Json
             )
-            setBody(
-                listOf(
-                    "name" to "Milk",
-                    "quantity" to "1",
-                    "type" to "Dairy"
-                ).formUrlEncode()
-            )
+            setBody(product)
         }
-
         assertEquals(HttpStatusCode.NoContent, response1.status)
 
         val response2 = client.get("/pantry/products")
         assertEquals(HttpStatusCode.OK, response2.status)
-        val body = response2.bodyAsText()
 
-        assertContains(body, "Milk")
-        assertContains(body, "Dairy")
+        val productNames = response2
+            .body<List<Product>>()
+            .map { it.name }
+
+        assertContains(productNames, "salt")
     }
 }

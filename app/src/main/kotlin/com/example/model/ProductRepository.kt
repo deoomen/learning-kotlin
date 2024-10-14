@@ -25,4 +25,8 @@ object ProductRepository {
         }
         products.add(product)
     }
+
+    fun removeProduct(name: String): Boolean {
+        return products.removeIf { it.name == name }
+    }
 }
