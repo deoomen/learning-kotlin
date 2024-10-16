@@ -12,6 +12,6 @@ fun Application.module() {
     val repository = PostgresProductRepository()
 
     configureSerialization(repository)
-    configureDatabases()
+    configureDatabases(environment.config)
     configureRouting()
 }

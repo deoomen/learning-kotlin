@@ -13,7 +13,7 @@ import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransacti
 object ProductTable : IntIdTable("product") {
     val name = varchar("name", 50)
     val quantity = integer("quantity")
-    val type = varchar("priority", 50)
+    val type = varchar("type", 50)
 }
 
 class ProductDAO(id: EntityID<Int>) : IntEntity(id) {

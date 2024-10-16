@@ -1,1 +1,1 @@
-rootProject.name = "com.example.ktor-recipe-search"
+rootProject.name = "com.example.ktor-learning-kotlin"

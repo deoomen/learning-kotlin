@@ -8,9 +8,12 @@ import io.ktor.server.routing.*
 import java.sql.*
 import kotlinx.coroutines.*
 import org.jetbrains.exposed.sql.*
+import io.ktor.server.config.*
 
-fun Application.configureDatabases() {
+fun Application.configureDatabases(config: ApplicationConfig) {
     Database.connect(
-        url = "...",
+        url = config.property("storage.jdbcURL").getString(),
+        user = config.property("storage.user").getString(),
+        password = config.property("storage.password").getString(),
     )
 }
